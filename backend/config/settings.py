@@ -7,14 +7,10 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Production: set SECRET_KEY, DEBUG=false, ALLOWED_HOSTS (comma-separated)
-SECRET_KEY = os.environ.get('SECRET_KEY', 'demo-dev-key-change-in-production-xyz123')
-DEBUG = os.environ.get('DEBUG', 'true').lower() in ('1', 'true', 'yes')
-ALLOWED_HOSTS = [
-    h.strip() for h in os.environ.get('ALLOWED_HOSTS', '*').split(',') if h.strip()
-]
-if '*' in ALLOWED_HOSTS or not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['*']
+# Local demo defaults
+SECRET_KEY = 'demo-dev-key-change-in-production-xyz123'
+DEBUG = True
+ALLOWED_HOSTS = ['*']
 
 # SPA frontend root (production).
 # Priority:
