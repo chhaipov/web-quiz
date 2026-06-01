@@ -1,0 +1,74 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Store - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <h1>Dota 2 Item Shop</h1>
+    <p class="subtitle">Browse and add items to your cart.</p>
+</header>
+
+<div class="filters">
+    <form method="get" id="filter-form" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <input type="text" name="search" placeholder="Search items…" value="{{ search_query }}" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; color: var(--text);">
+        <button type="submit" class="btn btn-sm">Search</button>
+        <select name="rarity" id="rarity-filter" onchange="this.form.submit()">
+            <option value="">All rarities</option>
+            <option value="common" {% if filter_rarity == 'common' %}selected{% endif %}>Common</option>
+            <option value="uncommon" {% if filter_rarity == 'uncommon' %}selected{% endif %}>Uncommon</option>
+            <option value="rare" {% if filter_rarity == 'rare' %}selected{% endif %}>Rare</option>
+            <option value="legendary" {% if filter_rarity == 'legendary' %}selected{% endif %}>Legendary</option>
+        </select>
+        <select name="category" id="category-filter" onchange="this.form.submit()">
+            <option value="">All categories</option>
+            <option value="core" {% if filter_category == 'core' %}selected{% endif %}>Core</option>
+            <option value="support" {% if filter_category == 'support' %}selected{% endif %}>Support</option>
+            <option value="neutral" {% if filter_category == 'neutral' %}selected{% endif %}>Neutral</option>
+            <option value="consumable" {% if filter_category == 'consumable' %}selected{% endif %}>Consumable</option>
+        </select>
+    </form>
+</div>
+
+{% if search_query %}
+<!-- VULN(Reflected XSS): |safe bypasses Django auto-escaping -->
+<p class="subtitle">Showing results for: {{ search_query|safe }}</p>
+{% endif %}
+
+<div class="item-grid">
+    {% for item in items %}
+    <article class="item-card">
+        {% if item.image_src %}
+        <img src="{{ item.image_src }}" alt="" class="item-img" onerror="this.style.display='none'">
+        {% endif %}
+        <div class="item-card-body">
+            <span class="rarity-badge" style="--rarity-color: {% if item.rarity == 'legendary' %}#daa520{% elif item.rarity == 'rare' %}#3b82f6{% elif item.rarity == 'uncommon' %}#22c55e{% else %}#9ca3af{% endif %}">{{ item.get_rarity_display }}</span>
+            <a href="{% url 'shop:item_detail' item.id %}" class="item-link">{{ item.name }}</a>
+            <div class="item-pricing">
+                <span class="gold">{{ item.gold_cost }}g</span>
+                <span class="price">${{ item.usd_price }}</span>
+            </div>
+            <p class="desc">{{ item.description|truncatewords:15 }}</p>
+        </div>
+        <div class="card-actions">
+            <a href="{% url 'shop:item_detail' item.id %}" class="btn btn-sm">Details</a>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'shop:cart_add' %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="item_id" value="{{ item.id }}">
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="btn btn-sm btn-primary">Add to Cart</button>
+            </form>
+            {% else %}
+            <a href="{% url 'shop:login' %}" class="btn btn-sm btn-primary">Add to Cart</a>
+            {% endif %}
+        </div>
+    </article>
+    {% empty %}
+    <div class="empty-state" style="grid-column: 1 / -1;">
+        <div class="empty-state-icon">🛒</div>
+        <h2>No items found</h2>
+        <p>Try adjusting your filters or <a href="{% url 'shop:items' %}" class="item-link">clear filters</a>.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Profile - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<h1>Your Profile</h1>
+
+<div class="card" style="max-width: 500px;">
+    <h2>Edit Account</h2>
+    <!-- VULN(CSRF): no {% csrf_token %} — form can be submitted from any site -->
+    <form method="post" action="{% url 'shop:profile' %}" class="auth-form" style="margin-top: 1rem;">
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" value="{{ profile_user.username }}">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" value="{{ profile_user.email }}">
+        <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

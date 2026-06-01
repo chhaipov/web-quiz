@@ -1,0 +1,24 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Template Preview - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<h1>Template Preview</h1>
+<p class="subtitle">Enter a Django template string to preview it.</p>
+
+<div class="card" style="max-width: 600px;">
+    <form method="get" action="{% url 'shop:preview' %}">
+        <label for="tpl">Template String</label>
+        <textarea name="tpl" id="tpl" rows="4" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text); border-radius: 4px; margin: 0.5rem 0;">{{ template_str }}</textarea>
+        <button type="submit" class="btn btn-primary">Render</button>
+    </form>
+</div>
+
+{% if rendered %}
+<div class="card" style="max-width: 600px; margin-top: 1rem;">
+    <h2>Output</h2>
+    <!-- VULN(SSTI+XSS): rendered output from user-supplied template, marked safe -->
+    <div>{{ rendered|safe }}</div>
+</div>
+{% endif %}
+{% endblock %}

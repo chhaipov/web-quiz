@@ -1,0 +1,32 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Orders - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <h1>Order History</h1>
+    <p class="subtitle">View and track your purchases</p>
+</header>
+
+{% if orders %}
+<div class="orders-list">
+    {% for order in orders %}
+    <article class="order-card">
+        <div class="order-header">
+            <strong>Order #{{ order.id }}</strong>
+            <span>{{ order.created_at|date:"M d, Y H:i" }}</span>
+            <span class="order-status status-{{ order.status }}">{{ order.get_status_display }}</span>
+        </div>
+        <ul class="order-items">
+            {% for oi in order.order_items.all %}
+            <li><a href="{% url 'shop:item_detail' oi.item.id %}">{{ oi.quantity }}x {{ oi.item.name }}</a> — ${{ oi.price_snapshot }}</li>
+            {% endfor %}
+        </ul>
+        <p class="order-total">Total: ${{ order.total }}</p>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<p class="subtitle">No orders yet. <a href="{% url 'shop:items' %}" class="item-link">Browse items</a> and checkout.</p>
+{% endif %}
+{% endblock %}

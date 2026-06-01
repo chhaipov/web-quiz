@@ -1,0 +1,72 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}{{ item.name }} - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'shop:landing' %}">Home</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{% url 'shop:items' %}">Store</a>
+    <span class="breadcrumb-sep">/</span>
+    <span>{{ item.name }}</span>
+</nav>
+
+<div class="card detail-card">
+    {% if item.image_src %}
+    <img src="{{ item.image_src }}" alt="" class="detail-img">
+    {% endif %}
+    <div class="detail-info">
+        <span class="rarity-badge" style="--rarity-color: {% if item.rarity == 'legendary' %}#daa520{% elif item.rarity == 'rare' %}#3b82f6{% elif item.rarity == 'uncommon' %}#22c55e{% else %}#9ca3af{% endif %}">{{ item.get_rarity_display }}</span>
+        <h1>{{ item.name }}</h1>
+        <div class="detail-meta">
+            <span class="gold">{{ item.gold_cost }} gold</span>
+            <span class="price">${{ item.usd_price }}</span>
+            <span class="category">Category: {{ item.get_category_display }}</span>
+        </div>
+        <p class="desc">{{ item.description }}</p>
+        {% if user.is_authenticated %}
+        <form method="post" action="{% url 'shop:cart_add' %}" class="add-row">
+            {% csrf_token %}
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            <input type="number" name="quantity" value="1" min="1" max="99">
+            <button type="submit" class="btn btn-primary">Add to Cart</button>
+        </form>
+        {% else %}
+        <p><a href="{% url 'shop:login' %}" class="btn btn-primary">Log in to Add to Cart</a></p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Reviews</h2>
+
+    {% if user.is_authenticated %}
+    <form method="post" style="margin: 1rem 0; display: flex; flex-direction: column; gap: 0.5rem; max-width: 500px;">
+        {% csrf_token %}
+        <label for="rating">Rating (1-5)</label>
+        <select name="rating" id="rating">
+            <option value="5">5 - Excellent</option>
+            <option value="4">4 - Good</option>
+            <option value="3">3 - Average</option>
+            <option value="2">2 - Poor</option>
+            <option value="1">1 - Terrible</option>
+        </select>
+        <label for="review-text">Your Review</label>
+        <textarea name="text" id="review-text" rows="3" style="padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text); border-radius: 4px;" placeholder="Write your review..."></textarea>
+        <button type="submit" class="btn btn-primary" style="align-self: flex-start;">Submit Review</button>
+    </form>
+    {% endif %}
+
+    {% for review in reviews %}
+    <div style="border-bottom: 1px solid var(--border); padding: 0.75rem 0;">
+        <strong>{{ review.user.username }}</strong>
+        <span class="gold">{{ review.rating }}/5</span>
+        <time style="color: var(--text-muted); margin-left: 0.5rem;">{{ review.created_at|date:"M d, Y" }}</time>
+        <!-- VULN(Stored XSS): |safe renders raw HTML from user-submitted review text -->
+        <p style="margin-top: 0.25rem;">{{ review.text|safe }}</p>
+    </div>
+    {% empty %}
+    <p style="color: var(--text-muted);">No reviews yet. Be the first!</p>
+    {% endfor %}
+</div>
+{% endblock %}

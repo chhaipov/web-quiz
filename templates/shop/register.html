@@ -1,0 +1,20 @@
+{% extends 'shop/base.html' %}
+
+{% block main_class %}main-center{% endblock %}
+
+{% block title %}Register - Dota 2 Shop{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+    <h1>Create Account</h1>
+    <p class="subtitle">Join the Dota 2 Item Shop</p>
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+    </form>
+    <p class="auth-footer">
+        Already have an account? <a href="{% url 'shop:login' %}">Log in</a>
+    </p>
+</div>
+{% endblock %}

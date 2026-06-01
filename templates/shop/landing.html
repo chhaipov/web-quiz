@@ -1,0 +1,21 @@
+{% extends 'shop/base.html' %}
+
+{% block title %}Dota 2 Item Shop{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <h1>Dota 2 Item Shop</h1>
+    <p class="subtitle">Browse legendary items from the battlefield.</p>
+</header>
+
+<div class="card" style="max-width: 600px; border-left: 4px solid var(--gold);">
+    <h2>Welcome</h2>
+    <p class="desc">Discover powerful items to enhance your gameplay. Add items to your cart and checkout when you're ready.</p>
+    <div class="card-actions">
+        <a href="{% url 'shop:items' %}" class="btn btn-primary">Browse Items</a>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'shop:login' %}" class="btn">Log in</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

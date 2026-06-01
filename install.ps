@@ -1,0 +1,149 @@
+$ErrorActionPreference = "Stop"
+
+$RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$BackendDir = Join-Path $RootDir "backend"
+$FrontendDir = Join-Path $RootDir "frontend"
+$VenvDir = Join-Path $BackendDir "venv"
+$SpaDir = Join-Path $BackendDir "static\\spa"
+$EnvFile = Join-Path $BackendDir ".env"
+$FrontendEnvFile = Join-Path $FrontendDir ".env"
+
+function Write-Step {
+    param([string]$Message)
+    Write-Host ""
+    Write-Host "[install.ps] $Message"
+}
+
+function Ensure-Winget {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "winget is required to auto-install missing dependencies on Windows."
+    }
+}
+
+function Ensure-PythonInstalled {
+    if ((Get-Command py -ErrorAction SilentlyContinue) -or (Get-Command python -ErrorAction SilentlyContinue)) {
+        return
+    }
+
+    Ensure-Winget
+    Write-Step "Installing Python 3"
+    winget install --id Python.Python.3.12 --exact --accept-package-agreements --accept-source-agreements
+}
+
+function Ensure-CommandOrInstall {
+    param(
+        [string]$CommandName,
+        [string]$WingetId,
+        [string]$Label
+    )
+
+    if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    Ensure-Winget
+    Write-Step "Installing $Label"
+    winget install --id $WingetId --exact --accept-package-agreements --accept-source-agreements
+}
+
+function Get-PythonCommand {
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        return @{
+            Exe = "py"
+            Args = @("-3")
+        }
+    }
+
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        return @{
+            Exe = "python"
+            Args = @()
+        }
+    }
+
+    throw "Python 3 is required but was not found after dependency installation."
+}
+
+Ensure-PythonInstalled
+Ensure-CommandOrInstall -CommandName "npm" -WingetId "OpenJS.NodeJS.LTS" -Label "Node.js and npm"
+
+$PythonCommand = Get-PythonCommand
+
+Write-Step "Creating backend virtual environment"
+& $PythonCommand.Exe @($PythonCommand.Args + @("-m", "venv", $VenvDir))
+
+$VenvPython = Join-Path $VenvDir "Scripts\\python.exe"
+if (-not (Test-Path $VenvPython)) {
+    throw "Virtual environment was created, but $VenvPython was not found."
+}
+
+Write-Step "Upgrading pip"
+& $VenvPython -m pip install --upgrade pip
+
+Write-Step "Installing backend dependencies"
+& $VenvPython -m pip install -r (Join-Path $BackendDir "requirements.txt")
+
+Write-Step "Installing frontend dependencies"
+Push-Location $FrontendDir
+npm install
+Pop-Location
+
+Write-Step "Building frontend"
+Push-Location $FrontendDir
+$env:VITE_API_URL = "/api"
+npm run build
+Remove-Item Env:VITE_API_URL
+Pop-Location
+
+Write-Step "Copying frontend build into backend static files"
+if (Test-Path $SpaDir) {
+    Remove-Item -LiteralPath $SpaDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $SpaDir | Out-Null
+Copy-Item -Path (Join-Path $FrontendDir "dist\\*") -Destination $SpaDir -Recurse -Force
+
+Write-Step "Running Django migrations"
+Push-Location $BackendDir
+& $VenvPython manage.py migrate
+
+Write-Step "Seeding demo items"
+& $VenvPython manage.py seed_items
+
+Write-Step "Collecting static files"
+& $VenvPython manage.py collectstatic --noinput
+Pop-Location
+
+if (-not (Test-Path $EnvFile)) {
+    Write-Step "Creating backend environment file"
+    @"
+SECRET_KEY=change-this-secret-key
+DEBUG=true
+ALLOWED_HOSTS=*
+SPA_ROOT=
+DB_PATH=$BackendDir\db.sqlite3
+"@ | Set-Content -Path $EnvFile
+}
+
+if (-not (Test-Path $FrontendEnvFile)) {
+    Write-Step "Creating frontend environment file"
+    @"
+VITE_API_URL=/api
+"@ | Set-Content -Path $FrontendEnvFile
+}
+
+Write-Host ""
+Write-Host "Setup complete."
+Write-Host ""
+Write-Host "Environment file:"
+Write-Host "  $EnvFile"
+Write-Host ""
+Write-Host "Frontend environment file:"
+Write-Host "  $FrontendEnvFile"
+Write-Host ""
+Write-Host "To run the backend:"
+Write-Host "  cd backend"
+Write-Host "  .\\venv\\Scripts\\Activate.ps1"
+Write-Host "  python manage.py runserver 0.0.0.0:8000"
+Write-Host ""
+Write-Host "Open:"
+Write-Host "  http://localhost:8000"
